@@ -36,7 +36,7 @@ function addSessionGp(sId, history, cnt) {
 function addHistory(table, tbody, history, firstcheck) {
 	if (firstcheck) {
 		var html = tbody.html();
-		if (html.match(/<tr[^>]*><td>(.*)<\/td><td>(.*)<\/td><td><\/td><td>(.*)<\/td><\/tr>/)) {
+		if (html&&html.match(/<tr[^>]*><td>(.*)<\/td><td>(.*)<\/td><td><\/td><td>(.*)<\/td><\/tr>/)) {
 			var d2 = new Date(history.visited);
 			var d1 =  new Date(RegExp.$2);
 			var stayed = (d2 - d1)/1000;
@@ -76,7 +76,7 @@ function ajaxUpdate(interval) {
 				var sessionGp = $("#gp" + sId);
 				var table = $("#tr" + sId);
 				var tbody = $("#ty" + sId);
-				if (sessionGp.length && table.length) {
+				if (sessionGp && sessionGp.length && table.length) {
 					$("#list").prepend(table);
 					$("#list").prepend(sessionGp);
 					table.show();
@@ -86,11 +86,11 @@ function ajaxUpdate(interval) {
 				    var history = (data[sessionId])[idx];
 					if (first && (idx == 0)) {
 						latestHid = history.id;
-						console.log("update hid" + latestHid);
+						//console.log("update hid" + latestHid);
 						first = false;
 					}
 					firstcheck = (idx == data[sessionId].length - 1);
-					if (!sessionGp.length) {
+					if (!sessionGp || !sessionGp.length) {
 						sessionGp = addSessionGp(sId, history, data[sessionId].length);
 						table = $("#tr" + sId);
 						tbody = $("#ty" + sId);
