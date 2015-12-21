@@ -1,0 +1,46 @@
+Plugin\CustomerTracker\Entity\History:
+    type: entity
+    table: plg_ct_history
+    repositoryClass: Plugin\CustomerTracker\Repository\HistoryRepository
+    indexes:
+        customer_session_visited_key:
+            columns:
+                - customer_id
+                - session_id
+                - visited
+    id:
+        id:
+            type: integer
+            nullable: false
+            unsigned: false
+            id: true
+            column: history_id
+            generator:
+                strategy: AUTO
+    fields:
+        session_id:
+            type: string
+            length: 255
+            nullable: false
+        uri:
+            type: string
+            length: 255
+            nullable: false
+        referrer:
+            type: string
+            length: 255
+            nullable: true
+        visited:
+            type: datetime
+            nullable: false
+        stayed:
+            type: integer
+            nullable: true
+    manyToOne:
+        Customer:
+            targetEntity: Eccube\Entity\Customer
+            joinColumn:
+                name: customer_id
+                referencedColumnName: customer_id
+                nullable: true
+    lifecycleCallbacks: {  }

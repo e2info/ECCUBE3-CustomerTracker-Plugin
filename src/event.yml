@@ -1,0 +1,4 @@
+eccube.event.app.before:
+    - [prepareCustomerTracker, NORMAL]
+eccube.event.app.renderafter:
+    - [recordHistory, NORMAL]

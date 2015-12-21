@@ -1,0 +1,9 @@
+.git
+.git-rewrite
+.settings
+.project
+.classpath
+.buildpath
+.DS_Store
+.idea
+nbproject

@@ -1,0 +1,152 @@
+{% block stylesheet %}
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/animate.css/3.4.0/animate.min.css"/>
+<style>
+.animated {
+	-webkit-animation-fill-mode: none!important;
+}
+.animated td, td.animated {
+	background-color:#e88!important;
+	color:#fff;
+}
+</style>
+{% endblock stylesheet %}
+{% block javascript %}
+<script>
+function clickGroup(gp) {
+	var tableId = '#tr' + gp.id.substring(2);
+	$(tableId).toggle();
+	return false;
+}
+
+function addSessionGp(sId, history, cnt) {
+	$("#notfound").hide();
+	$("#list").prepend(
+		'<div href="#" class="list-group-item" id="gp' + sId + 
+		'" onclick="return clickGroup(this)"  style="cursor:pointer;">' +
+		'<span class="badge" id="bg' + sId + '" >' + cnt + '</span>' +
+		history.customerName + '(' + sId + ')' +
+		'</div><div class="table_list" id="tr' + sId + '">' +
+		'<div class="table-responsive" style="margin-left:10px;border-left:1px solid #ddd;border-right:1px solid #ddd;">' +
+		'<table class="table table-striped" style="margin-bottom:0px;"><thead><tr>' +
+        '<th>ページ</th><th>訪問日時</th><th>滞在時間(秒)</th><th>HTTPリファラ</th></tr></thead><tbody id="ty' +
+        sId + '"></tbody></table></div></div>');
+	$("#activeUsers").text(Number($("#activeUsers").text()) + 1);
+}
+
+function addHistory(table, tbody, history, firstcheck) {
+	if (firstcheck) {
+		var html = tbody.html();
+		if (html.match(/<tr[^>]*><td>(.*)<\/td><td>(.*)<\/td><td><\/td><td>(.*)<\/td><\/tr>/)) {
+			var d2 = new Date(history.visited);
+			var d1 =  new Date(RegExp.$2);
+			var stayed = (d2 - d1)/1000;
+			tbody.html(html.replace(/(<tr[^>]*><td>.*<\/td><td>.*<\/td>)<td><\/td>(<td>.*<\/td><\/tr>)/, "$1<td class='animated flash'>"+stayed+"</td>$2"));
+		}
+	}
+	
+	tbody.prepend("<tr class='animated flash'><td>" + 
+		history.uri + "</td><td>" +
+		history.visited + "</td><td>" +
+		history.stayed + "</td><td>" + 
+		history.referrer + "</td></tr>");
+}
+
+{% if latestHistory %}
+	var latestHid = {{ latestHistory.id }};
+{% else %}
+	var latestHid = 0;
+{% endif %}
+function ajaxUpdate(interval) {
+    $.ajax({
+        url: '{{ url('plugin_CustomerTracker_admin_tracker') }}',
+        type: 'POST',
+        dataType: 'json',
+		data: {
+		    type: 'list',
+		    latest: latestHid,
+		    timerange: {{ timeRange }},
+		},
+		success: function(data) {
+			first = true;
+			$(".animated").removeClass("animated");
+			for(var sessionId in data){
+				sId = sessionId.substring(0, 10);
+				var badge = $("#bg" + sId);
+				badge.text(Number(badge.text()) + data[sessionId].length);
+				var sessionGp = $("#gp" + sId);
+				var table = $("#tr" + sId);
+				var tbody = $("#ty" + sId);
+				if (sessionGp.length && table.length) {
+					$("#list").prepend(table);
+					$("#list").prepend(sessionGp);
+					table.show();
+				}
+				
+				for (var idx = data[sessionId].length - 1; idx >= 0; idx--) {
+				    var history = (data[sessionId])[idx];
+					if (first && (idx == 0)) {
+						latestHid = history.id;
+						console.log("update hid" + latestHid);
+						first = false;
+					}
+					firstcheck = (idx == data[sessionId].length - 1);
+					if (!sessionGp.length) {
+						sessionGp = addSessionGp(sId, history, data[sessionId].length);
+						table = $("#tr" + sId);
+						tbody = $("#ty" + sId);
+						firstcheck = false;
+					}
+					addHistory(table, tbody, history, firstcheck);
+				}
+	        }
+	        timeoutId = setTimeout('update(' + interval + ')', interval);
+		},
+        error: function() {
+        	timeoutId = setTimeout('update(' + interval + ')', interval);
+        }
+    });
+} 
+</script>
+{% endblock javascript %}
+    <div class="row" style="margin-top:52px;">
+        <div class="box">
+            <div class="box-body">
+				<div class="list-group" id="list">
+				{% if groupedHistory|length == 0 %}
+				<div id="notfound">アクセスがありません。</div>
+				{% endif %}
+				   {% for sessionId, histories in groupedHistory %}
+				   {% set sId = sessionId|slice(0, 10) %}
+					  <div class="list-group-item" id="gp{{sId}}" onclick="return clickGroup(this)" style="cursor:pointer;">
+					  	<span class="badge" id="bg{{sId}}" >{{ histories|length }}</span>
+					  	{% if histories[0].customer %}
+					  	{{ histories[0].customerName }}
+					  	{% else %}
+					  	未ログイン
+					  	{% endif %}
+					    ({{ sId }})
+					  </div>
+                    <div class="table_list" id="tr{{sId}}" style="display:none;">
+                        <div class="table-responsive" style="margin-left:10px;border-left:1px solid #ddd;border-right:1px solid #ddd;">
+                            <table class="table table-striped" style="margin-bottom:0px;">
+                                <thead>
+                                <tr>
+                                    <th>ページ</th>
+                                    <th>訪問日時</th>
+                                    <th>滞在時間(秒)</th>
+                                    <th>HTTPリファラ</th>
+                                </tr>
+                                </thead>
+                                <tbody  id="ty{{sId}}">
+                                {% for history in histories %}
+<tr><td>{{ history.uri }}</td><td>{{ history.visited|date("Y-m-d H:i:s") }}</td><td>{{ history.stayed }}</td><td>{{ history.referrer }}</td></tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+				  {% endfor %}
+				</div>                
+            </div>
+        </div><!-- /.box -->
+    </div>

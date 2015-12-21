@@ -1,0 +1,8 @@
+{% extends 'default_frame.twig' %}
+{% set menus = ['customer', 'plugin_CustomerTracker_admin_tracker'] %}
+{% block title %}{{ include('CustomerTracker/View/Admin/toolbar.twig') }}{% endblock %}
+{% block main %}
+{{ include(template) }}
+{% endblock %}
+{% block javascript %}
+{% endblock %}

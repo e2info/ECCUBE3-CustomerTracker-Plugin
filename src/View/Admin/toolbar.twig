@@ -1,0 +1,116 @@
+{% block javascript %}
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery.form/3.51/jquery.form.min.js"></script>
+<script>
+function fullscreen() {
+	{% if app.request.get('fullscreen') == 1 %}
+	return insertParam('fullscreen','0');
+	{% else %}
+	return insertParam('fullscreen','1');
+	{% endif %}
+}
+
+function insertParam(key, value)
+{
+    key = encodeURI(key); value = encodeURI(value);
+    var kvp = document.location.search.substr(1).split('&');
+	kvp = getParams(kvp, key, value);
+    if (curInterval > 0) {
+    	kvp = getParams(kvp, 'interval', curInterval);
+    }
+    document.location.search = kvp.join('&');
+    return false; 
+}
+
+function getParams(kvp, key, value)
+{
+    var i=kvp.length; var x; while(i--) 
+    {
+        x = kvp[i].split('=');
+
+        if (x[0]==key)
+        {
+            x[1] = value;
+            kvp[i] = x.join('=');
+            break;
+        }
+    }
+
+    if(i<0) {kvp[kvp.length] = [key,value].join('=');}
+    return kvp;
+}
+
+</script>
+<script>
+function updateInterval(interval) {
+	if (timeoutId > 0) {
+		clearTimeout(timeoutId);
+		timeoutId = 0;
+	}
+	curInterval = interval/1000;	
+	$("#buttonInterval").parent().removeClass('open');
+	$("#updateInterval").text(curInterval);
+	update(interval);
+	return false;
+} 
+
+function update(interval) {
+	//ajax update
+	ajaxUpdate(interval);
+}
+
+var timeoutId;
+var curInterval = 0;
+var timeoutId = setTimeout('update({{ updateInterval * 1000}})', {{ updateInterval * 1000}});
+</script>
+{% endblock javascript %}
+<nav class="navbar navbar-default navbar-fixed-top">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#toolbar-collapse" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <p class="navbar-text"><span class="icon node-icon glyphicon glyphicon-user"></span>トラッカー &nbsp;<a href="#" onclick="return fullscreen()" title="全画面切替"><span class="glyphicon glyphicon-fullscreen" aria-hidden="true"></span></a></p>
+      </div>
+      <div class="collapse navbar-collapse" id="toolbar-collapse">
+      <p class="navbar-text"><span class="label label-info" style="padding:8px;">セッション数 <span class="badge" style="background-color:#fff;color:#337ab7" id="activeUsers">{{ activeCount }}</span></span></p>
+      <p class="navbar-text"><span class="label label-info" style="padding:8px;">セッション期限 <span class="badge" style="background-color:#fff;color:#337ab7" >{{ sessTimeout }}</span> 秒</span></p>
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">表示範囲({{ rangeText }})<span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="#" onclick="return insertParam('range','session')">有効セッション</a></li>
+            <li><a href="#" onclick="return insertParam('range','day')">本日</a></li>
+            <li><a href="#" onclick="return insertParam('range','week')">一週間</a></li>
+            <li><a href="#" onclick="return insertParam('range','month')">30日間</a></li>
+          </ul>
+        </li>          
+      </ul>
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">表示種別({{ typeText }})<span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="#" onclick="return insertParam('type','force')">カテゴリ</a></li>
+            <li><a href="#" onclick="return insertParam('type','graph')">タイムチャート</a></li>
+            <li><a href="#" onclick="return insertParam('type','list')">一覧表示</a></li>
+          </ul>
+        </li>
+      </ul>
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+          <a href="#"　class="dropdown-toggle" id="buttonInterval" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">更新頻度(<span id="updateInterval">{{updateInterval}}</span>秒)<span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="#" onclick="return updateInterval(3000)">3秒</a></li>
+            <li><a href="#" onclick="return updateInterval(5000)">5秒</a></li>
+            <li><a href="#" onclick="return updateInterval(10000)">10秒</a></li>
+            <li><a href="#" onclick="return updateInterval(20000)">20秒</a></li>
+            <li><a href="#" onclick="return updateInterval(60000)">60秒</a></li>
+          </ul>
+        </li>
+      </ul>
+      </div>
+  </div><!-- /.container-fluid -->
+</nav>
