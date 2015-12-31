@@ -23,6 +23,11 @@ class History extends \Eccube\Entity\AbstractEntity
      * @var string
      */
     private $uri;
+
+    /**
+     * @var string
+     */
+    private $prev_uri;
     
     /**
      * @var string
@@ -100,6 +105,29 @@ class History extends \Eccube\Entity\AbstractEntity
         return $this->uri;
     }
 
+    /**
+     * Set prevUri
+     *
+     * @param string $uri
+     * @return History
+     */
+    public function setPrevUri($prevUri)
+    {
+        $this->prev_uri = $prevUri;
+    
+        return $this;
+    }
+    
+    /**
+     * Get prevUri
+     *
+     * @return string
+     */
+    public function getPrevUri()
+    {
+        return $this->prev_uri;
+    }
+    
     /**
      * Set referrer
      *

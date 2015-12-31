@@ -33,41 +33,47 @@ class TrackerController
             $timeRange = 24 * 30 * 3600;
             $rangeText = "30日間";
         }
-        $type = $app['request']->get('type');
-        if ($type == 'force') {
-            $typeText = "カテゴリ";
-            $template = 'CustomerTracker/View/Admin/graph.twig';
-        } elseif ($type == 'graph') {
-            $typeText = "タイムチャート";
-            $template = 'CustomerTracker/View/Admin/force.twig';
-        } else {
-            $typeText = "一覧表示";
-            $template = 'CustomerTracker/View/Admin/list.twig';
-        }
         
         $updateInterval = (int) $app['request']->get('interval');
         if ($updateInterval <= 0) {
             $updateInterval = 3;
         }
         
-        $groupedHistory = $app['eccube.plugin.customer_tracker.repository.history']->getGroupedHistory($timeRange);
-        $latestHistory = null;
-        if (sizeof($groupedHistory) > 0) {
-            $latestHistory = array_values($groupedHistory)[0][0];
-        }
-        
         $vars = array(
             'sessTimeout' => $sessTimeout,
             'activeCount' => $activeCount,
-            'groupedHistory' => $groupedHistory,
             'rangeText' => $rangeText,
             'updateInterval' => $updateInterval,
-            'typeText' => $typeText,
-            'template' => $template,
-            'latestHistory' => $latestHistory,
             'timeRange' => $timeRange
         );
         
+        $type = $app['request']->get('type');
+        if ($type == 'force') {
+            $typeText = "URIチャート";
+            $template = 'CustomerTracker/View/Admin/force.twig';
+            $groupedHistory = $app['eccube.plugin.customer_tracker.repository.history']->getGroupedHistory($timeRange);
+            $latestHistory = null;
+            if (sizeof($groupedHistory) > 0) {
+                $latestHistory = array_values($groupedHistory)[0][0];
+            }
+            $relations = $app['eccube.plugin.customer_tracker.repository.history']->getUriRelations($groupedHistory);
+            $vars['forceHistoryJson'] = json_encode($relations);
+            $vars['latestHistory'] = $latestHistory;
+        } else {
+            $typeText = "一覧表示";
+            $template = 'CustomerTracker/View/Admin/list.twig';
+            $groupedHistory = $app['eccube.plugin.customer_tracker.repository.history']->getGroupedHistory($timeRange);
+            $latestHistory = null;
+            if (sizeof($groupedHistory) > 0) {
+                $latestHistory = array_values($groupedHistory)[0][0];
+            }
+            $vars['groupedHistory'] = $groupedHistory;
+            $vars['latestHistory'] = $latestHistory;
+        }
+        
+        $vars['typeText'] = $typeText;
+        $vars['template'] = $template;
+
         if ($fullscreen) {
             return $app['view']->render('CustomerTracker/View/Admin/fullscreen_tracker.twig', $vars);
         } else {
@@ -75,15 +81,17 @@ class TrackerController
             $str = preg_replace('/<h1\s*class\s*\=\s*\"page\-header\">(.*)<\/h1>/is', '${1}', $str);
             return $str;
         }
+        
     }
 
     function ajax(Application $app, Request $request)
     {
-        if (! $request->isXmlHttpRequest()) {
-            return "";
-        }
+        //if (! $request->isXmlHttpRequest()) {
+        //    return "";
+        //}
         $latestHistoryId = (int) $app['request']->get('latest');
-        if ($app['request']->get('type') == 'list') {
+        switch ($app['request']->get('type')) {
+        case 'list':
             if ($latestHistoryId > 0) {
                 $groups = $app['eccube.plugin.customer_tracker.repository.history']->getLatestHistoryGroups($latestHistoryId);
             } else {
@@ -101,6 +109,22 @@ class TrackerController
                 }
             }
             return $app->json($groups);
+        case 'force':
+            if ($latestHistoryId > 0) {
+                $groupedHistory = $app['eccube.plugin.customer_tracker.repository.history']->getLatestHistoryGroups($latestHistoryId);
+            } else {
+                $timeRange = (int) $app['request']->get('timerange');
+                $groupedHistory = $app['eccube.plugin.customer_tracker.repository.history']->getGroupedHistory($timeRange);
+            }
+            if (sizeof($groupedHistory) > 0) {
+                $latestHistory = array_values($groupedHistory)[0][0];
+            }
+            $relations = $app['eccube.plugin.customer_tracker.repository.history']->getUriRelations($groupedHistory);
+            if ($latestHistory) {
+                $relations['latestHistoryId'] = $latestHistory->getId();
+            }
+            return $app->json($relations);
         }
+        return "";
     }
 }

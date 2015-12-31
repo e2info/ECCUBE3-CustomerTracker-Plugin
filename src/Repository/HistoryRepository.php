@@ -73,6 +73,114 @@ class HistoryRepository extends EntityRepository
             ->getResult());
         return $groups;
     }
+    
+    public function getUriRelations($groupedHistory)
+    {
+        $nodes = array();
+        $links = array();
+        if ($groupedHistory) {
+            foreach ($groupedHistory as $key => $histories) {
+                foreach ($histories as $history) {
+                    $uri = $history->getUri();
+                    if ($nodes[$uri]) {
+                        $nodes[$uri] += 1;
+                    } else {
+                        $nodes[$uri] = 1;
+                    }
+                    $prevUri = $history->getPrevUri();
+                    if ($prevUri && $prevUri != $uri) {
+                        if ($links[$prevUri] && $links[$prevUri][$uri]) {
+                            $links[$prevUri][$uri] += 1;
+                        } else {
+                            if (!$links[$prevUri])
+                                $links[$prevUri] = array();
+                            $links[$prevUri][$uri] = 1;
+                        }
+                    }
+                }
+            }
+        }
+        
+        foreach ($links as $uri1 => $link) {
+            if (!$nodes[$uri1]) {
+                $nodes[$uri1] = 0;
+            }
+        }
+        
+        $newnodes = array();
+        $newlinks = array();
+        $idx = 0;
+        foreach ($nodes as $uri => $count) {
+            $newnodes[$uri] = array('name'=>$uri, 'cnt'=>$count, 'idx' => $idx++);
+        }
+        foreach ($nodes as $uri => $count) {
+            if ($links[$uri]) {
+                foreach ($links[$uri] as $uri2 => $count2) {
+                    $idx1 = $newnodes[$uri]['idx'];
+                    if (!$newnodes[$uri2]) {
+                        $newnodes[$uri2] = array('name'=>$uri2, 'cnt'=>0, 'idx' => $newnodes.length);
+                    }
+                    $idx2 = $newnodes[$uri2]['idx'];
+                    $newlinks[] = array('source'=>$idx1, 'target'=>$idx2, 'weight'=>$count2);
+                }
+            }
+        }
+        
+        return array("nodes"=>array_values($newnodes), "links"=>$newlinks);
+    }
+    
+    public function getLatestUriRelations($latestHistoryId)
+    {
+        $nodes = array();
+        $links = array();
+        $groups = getLatestHistoryGroups($latestHistoryId);
+        if ($groups) {
+            foreach ($groups as $key => $histories) {
+                $lasturi = '';
+                foreach ($histories as $history) {
+                    $uri = $history->getUri();
+                    if ($nodes[$uri]) {
+                        $nodes[$uri] += 1;
+                    } else {
+                        $nodes[$uri] = 1;
+                    }
+                    if ($lasturi && $lasturi != $uri) {
+                        if ($links[$lasturi] && $links[$lasturi][$uri]) {
+                            $links[$lasturi][$uri] += 1;
+                        } else {
+                            if (!$links[$lasturi])
+                                $links[$lasturi] = array();
+                            $links[$lasturi][$uri] = 1;
+                        }
+                    }
+                    $lasturi = $uri;
+                }
+            }
+        }
+        $newnodes = array();
+        $newlinks = array();
+        $idx = 0;
+        foreach ($nodes as $uri => $count) {
+            $newnodes[$uri] = array('name'=>$uri, 'cnt'=>$count, 'idx' => $idx++);
+        }
+        foreach ($nodes as $uri => $count) {
+            if ($links[$uri]) {
+                foreach ($links[$uri] as $uri2 => $count2) {
+                    $idx1 = $newnodes[$uri]['idx'];
+                    if (!$newnodes[$uri2]) {
+                        $newnodes[$uri2] = array('name'=>$uri2, 'cnt'=>1, 'idx' => $newnodes.length);
+                    }
+                    $idx2 = $newnodes[$uri2]['idx'];
+    
+                    $newlinks[] = array('source'=>$idx1, 'target'=>$idx2, 'weight'=>$count2);
+                }
+            }
+        }
+    
+    
+        return array("nodes"=>array_values($newnodes), "links"=>$newlinks);
+    }
+    
 
     protected function groupResult($results)
     {

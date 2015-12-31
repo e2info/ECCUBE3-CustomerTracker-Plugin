@@ -101,8 +101,11 @@ function ajaxUpdate(interval) {
 	        }
 	        timeoutId = setTimeout('update(' + interval + ')', interval);
 		},
-        error: function() {
-        	timeoutId = setTimeout('update(' + interval + ')', interval);
+ 		error: function(XMLHttpRequest, textStatus, errorThrown) {
+            if(xmlHttpRequest.readyState == 0 || xmlHttpRequest.status == 0) {
+            	return;
+            } 
+        	alert("データ更新できませんでした、ページを更新してください。");
         }
     });
 } 

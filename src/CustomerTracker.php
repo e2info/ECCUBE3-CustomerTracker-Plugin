@@ -37,19 +37,26 @@ class CustomerTracker
         }
         if ($app['session']) {
             $em = $app['orm.em'];
+            $em->clear();
+            
             $history = new History();
             $history->setSessionId($app['session']->getId());
             $customer = null;
             if ($app['user'] instanceof \Eccube\Entity\Customer) {
-                $customer = $app['user'];
+                $customer = $em->getRepository('Eccube\Entity\Customer')
+                    ->find($app['user']->getId());
                 $history->setCustomer($customer);
             }
             $uri = substr($app['request']->getRequestUri(), 0, 255);
             $history->setUri($uri);
-            $history->setReferrer($app['request']->headers->get('referer'));
+            $refer = $app['request']->headers->get('referer');
+            $baseurl = $app->url('homepage');
+            $refer = str_replace($baseurl, '', $refer);
+            $history->setReferrer($refer);
             $visited = new \DateTime();
             $lastHistory = $app['eccube.plugin.customer_tracker.repository.history']->findLastOne($history);
             if ($lastHistory) {
+                $history->setPrevUri($lastHistory->getUri());
                 $lastHistory->setStayed($visited->getTimestamp() - $lastHistory->getVisited()
                     ->getTimestamp());
                 $em->persist($lastHistory);

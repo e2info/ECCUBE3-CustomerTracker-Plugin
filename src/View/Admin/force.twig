@@ -1,1 +1,290 @@
-ただいま実装中です
+{% block stylesheet %}
+<style>
+body, html, #main .container-fluid, #fullscreen, #wrapper, #main {
+	height: 100%;
+}
+#main .container-fluid, #fullscreen {
+	padding-top: 53px;
+}
+.navbar .container-fluid {
+	padding-top: 0px!important;
+}
+#wrapper {
+	margin-top: -65px;
+}
+#wrapper #main {
+	padding-top: 65px;
+	padding-bottom: 20px;
+}
+#wrapper #main .navbar{
+	margin-top: 65px;
+}
+#tracker {
+	margin: 0px;
+	padding: 0px;
+	height: 100%;
+}
+.node {
+  fill: #000;
+}
+.link {
+  stroke: #999;
+  stroke-opacity: .6;
+}
+.textClass {
+    stroke: #323232;
+    font-family: "Lucida Grande", "Droid Sans", Arial, Helvetica, sans-serif;
+    font-weight: normal;
+    stroke-width: .5;
+    font-size: 14px;
+    display: none;
+}
+</style>
+{% endblock stylesheet %}
+{% block javascript %}
+<script>
+{% if latestHistory %}
+	var latestHid = {{ latestHistory.id }};
+{% else %}
+	var latestHid = 0;
+{% endif %}
+var displayUriLabel = false;
+function switchUriLabel() {
+	if (displayUriLabel) {
+		$( ".textClass" ).hide();
+		displayUriLabel = false;
+	} else {
+		$( ".textClass" ).show();
+		displayUriLabel = true;
+	}
+	return true;
+}
+function replaceNode(idx, newNode) {
+    for (var i = 0; i < links.length; i++) {
+        if (links[i].source == nodes[idx]) {
+            links[i].source = newNode;
+        }
+        if (links[i].target == nodes[idx]) {
+            links[i].target = newNode;
+        }
+    }
+    if (newNode.version) {
+    	newNode.version = newNode.version + 1;
+    } else {
+    	newNode.version = 2;
+    }
+    nodes.splice(idx, 1, newNode);
+}
+
+function updateLink(newLink) {
+	var found = false;
+    for (var i = links.length - 1; i >= 0; i--) {
+        if ((links[i].source.index == newLink.source)&&(links[i].target.index == newLink.target)) {
+            links[i].weight = links[i].weight + newLink.weight;
+            found = true;
+        } 
+    }
+    if (!found) {
+    	links.push({"source": newLink.source, "target": newLink.target, "weight": newLink.weight});
+    }
+}
+
+function ajaxUpdate(interval) {
+    $.ajax({
+        url: '{{ url('plugin_CustomerTracker_admin_tracker') }}',
+        type: 'POST',
+        dataType: 'json',
+		data: {
+		    type: 'force',
+		    latest: latestHid,
+		    timerange: {{ timeRange }},
+		},
+		success: function(data) {
+			if (data.nodes.length > 0 || data.links.length > 0) {
+				latestHid = data.latestHistoryId;
+				updated = false;
+				for(var j = nodes.length - 1; j >= 0; j-- ){
+					if (nodes[j].isnew) {
+						var newNode = jQuery.extend({}, nodes[j]);
+						newNode.isnew = false;
+						replaceNode(j, newNode);
+						updated = true;
+					}
+				}
+				for (var i = 0; i < data.nodes.length; i++) {
+					found = -1;
+					for(var j = 0 ; j<nodes.length ; j++ ){
+						if (nodes[j].name == data.nodes[i].name) {
+							if (data.nodes[i].cnt > 0) {
+								var newNode = jQuery.extend({}, nodes[j]);
+								newNode.cnt = newNode.cnt + data.nodes[i].cnt;
+								newNode.isnew = true;
+								replaceNode(j, newNode);
+							}
+							found = j;
+							break;
+						}
+					}
+					if (found == -1) {
+						found = nodes.length;
+						if (data.nodes[i].cnt > 0) {
+							nodes.push({ cnt:data.nodes[i].cnt, idx: nodes.length, name: data.nodes[i].name, isnew: true });
+						} else {
+							nodes.push({ cnt:1, idx: nodes.length, name: data.nodes[i].name, isnew: false });
+						}
+						updated = true;
+					}
+					if (found >= 0) {
+						for (var k = 0; k < data.links.length; k++) {
+							if ((i == data.links[k].source)&&(!data.links[k].sourcedone)) {
+								data.links[k].source = found;
+								data.links[k].sourcedone = true;
+							}
+							if ((i == data.links[k].target)&&(!data.links[k].targetdone)) {
+								data.links[k].target = found;
+								data.links[k].targetdone = true;
+							}
+						}
+					}
+				}
+				if (updated) {
+					for (var k = 0; k < data.links.length; k++) {
+						if (data.links[k].sourcedone && data.links[k].targetdone) {
+							updateLink(data.links[k]);
+						}
+					}
+					draw();
+				}
+			}
+	        timeoutId = setTimeout('update(' + interval + ')', interval);
+		},
+ 		error: function(XMLHttpRequest, textStatus, errorThrown) {
+            if(xmlHttpRequest.readyState == 0 || xmlHttpRequest.status == 0) {
+            	return;
+            } 
+        	alert("データ更新できませんでした、ページを更新してください。");
+        }
+    });
+} 
+</script>
+{% endblock javascript %}
+<div id="tracker"></div>
+<script type="text/javascript" src="//d3js.org/d3.v3.min.js"></script>
+<script type="text/javascript" charset="utf-8">
+	var graph = jQuery.parseJSON('{{ forceHistoryJson|raw }}');
+	var w = $("#tracker").width() ;
+	var h = $("#tracker").height() - 10;
+	if (h < 0) h = 420;
+	
+	var color = d3.scale.category20();
+
+	var vis = d3.select("#tracker").append("svg")
+	    .attr("width", w)
+	    .attr("height", h)
+		.attr("id", "svg")
+        .attr("pointer-events", "all")
+        .attr("viewBox", "0 0 " + w + " " + h)
+        .attr("perserveAspectRatio", "xMinYMid")
+        .append('svg:g');
+                
+	var force = d3.layout.force();	    
+
+	force
+    	.nodes(graph.nodes)
+    	.links(graph.links);
+
+	var lineX2 = function (d) {
+	    var length = Math.sqrt(Math.pow(d.target.y - d.source.y, 2) + Math.pow(d.target.x - d.source.x, 2));
+	    var scale = (length - 3) / length;
+	    var offset = (d.target.x - d.source.x) - (d.target.x - d.source.x) * scale;
+	    return d.target.x - offset;
+	};
+	var lineY2 = function (d) {
+	    var length = Math.sqrt(Math.pow(d.target.y - d.source.y, 2) + Math.pow(d.target.x - d.source.x, 2));
+	    var scale = (length - 3) / length;
+	    var offset = (d.target.y - d.source.y) - (d.target.y - d.source.y) * scale;
+	    return d.target.y - offset;
+	};
+
+	var defs = vis.append('defs');
+	defs.append("svg:marker")
+	    .attr("id", "arrowGray")
+	    .attr("viewBox", "0 0 6 6")
+	    .attr("refX", "6")
+	    .attr("refY", "3")
+	    .attr("markerUnits", "strokeWidth")
+	    .attr("markerWidth", "6")
+	    .attr("markerHeight", "3")
+	    .attr("orient", "auto")
+	    .append("svg:path")
+	    .attr("d", "M 0 0 L 6 3 L 0 6 z")
+	    .attr("fill", "#999");
+	
+	var nodes = force.nodes(),
+	    links = force.links();
+	    				
+	draw();
+	function draw() {
+		var link = vis.selectAll("line")
+	    	.data(links);
+		link.enter().append("line")
+			.attr("class", "link")
+			.style("stroke-width", function(d) { return 2+Math.sqrt(d.weight); })
+		    .attr("marker-end", "url(#arrowGray)");
+		
+		link.exit().remove();
+		var node = vis.selectAll("g.node")
+			.data(nodes, function (d) {
+				if (!d.version) d.version = 1;
+            	return d.name + d.version;
+            });
+		var nodeEnter = node.enter().append("g")
+			.attr("class", "node")
+			.call(force.drag);
+			
+		nodeEnter.append("circle")
+			.attr("r", function(d) { return 3+Math.sqrt(d.cnt); })
+            .attr("fill", function(d) { 
+            	if (d.isnew) {
+            		return "#900"
+            	} else {
+            		return "#999" 
+				} 
+			});
+ 		var nodeLabel = nodeEnter.append("svg:text");
+ 		
+        nodeLabel.attr("class", "textClass")
+        	.attr("x", 14)
+			.attr("y", ".31em")
+			.text(function (d) {
+            	return d.name;
+            });
+        if (displayUriLabel) {
+        	nodeLabel.style("display", "inline");
+        }
+		nodeEnter.append("title")
+			.text(function(d) { return d.name; });
+	
+		force.on("tick", function () {
+ 			node.attr("transform", function (d) {
+                    return "translate(" + d.x + "," + d.y + ")";
+            });
+			link.attr("x1", function (d) {
+                    return d.source.x;
+            	})
+            	.attr("y1", function (d) {
+                	return d.source.y;
+                })
+	        	.attr("x2", lineX2)
+	        	.attr("y2", lineY2);
+	
+		});
+		
+		node.exit().remove();
+		force
+            .charge(-120)
+            .linkDistance(80)
+            .size([w, h])
+            .start();		
+	}
+</script>

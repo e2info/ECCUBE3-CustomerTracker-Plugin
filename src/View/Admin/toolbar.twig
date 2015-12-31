@@ -65,24 +65,26 @@ var timeoutId = setTimeout('update({{ updateInterval * 1000}})', {{ updateInterv
 {% endblock javascript %}
 <nav class="navbar navbar-default navbar-fixed-top">
   <div class="container-fluid">
-    <!-- Brand and toggle get grouped for better mobile display -->
-    <div class="navbar-header">
+      <div class="navbar-header">
       <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#toolbar-collapse" aria-expanded="false">
         <span class="sr-only">Toggle navigation</span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <p class="navbar-text"><span class="icon node-icon glyphicon glyphicon-user"></span>トラッカー &nbsp;<a href="#" onclick="return fullscreen()" title="全画面切替"><span class="glyphicon glyphicon-fullscreen" aria-hidden="true"></span></a></p>
+      <p class="navbar-text"><span class="icon node-icon glyphicon glyphicon-user"></span>トラッカー &nbsp;</p>
       </div>
       <div class="collapse navbar-collapse" id="toolbar-collapse">
-      <p class="navbar-text"><span class="label label-info" style="padding:8px;">セッション数 <span class="badge" style="background-color:#fff;color:#337ab7" id="activeUsers">{{ activeCount }}</span></span></p>
-      <p class="navbar-text"><span class="label label-info" style="padding:8px;">セッション期限 <span class="badge" style="background-color:#fff;color:#337ab7" >{{ sessTimeout }}</span> 秒</span></p>
+      <button type="button" class="btn btn-default navbar-btn" aria-label="全画面切替" title="全画面切替" onclick="return fullscreen()"><span class="glyphicon glyphicon-fullscreen" aria-hidden="true"></span></button>
+      {% if forceHistoryJson is defined %}
+	  <button type="button" class="btn btn-default navbar-btn" aria-label="URI表示切替" title="URI表示切替" onclick="return switchUriLabel()"><span class="glyphicon glyphicon-text-color" aria-hidden="true"></span></button>
+      {% endif %}
+      <p class="navbar-text" style="margin-left:5px;"><span class="label label-info" style="padding:8px 4px;">セッション<span class="badge" style="background-color:#fff;color:#337ab7" id="activeUsers">{{ activeCount }}</span>期限 <span class="badge" style="background-color:#fff;color:#337ab7" >{{ sessTimeout }}</span> 秒</span></p>
       <ul class="nav navbar-nav">
         <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">表示範囲({{ rangeText }})<span class="caret"></span></a>
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">期間({{ rangeText }})<span class="caret"></span></a>
           <ul class="dropdown-menu">
-            <li><a href="#" onclick="return insertParam('range','session')">有効セッション</a></li>
+            <li><a href="#" onclick="return insertParam('range','session')">セッション</a></li>
             <li><a href="#" onclick="return insertParam('range','day')">本日</a></li>
             <li><a href="#" onclick="return insertParam('range','week')">一週間</a></li>
             <li><a href="#" onclick="return insertParam('range','month')">30日間</a></li>
@@ -91,17 +93,16 @@ var timeoutId = setTimeout('update({{ updateInterval * 1000}})', {{ updateInterv
       </ul>
       <ul class="nav navbar-nav">
         <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">表示種別({{ typeText }})<span class="caret"></span></a>
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">表示({{ typeText }})<span class="caret"></span></a>
           <ul class="dropdown-menu">
-            <li><a href="#" onclick="return insertParam('type','force')">カテゴリ</a></li>
-            <li><a href="#" onclick="return insertParam('type','graph')">タイムチャート</a></li>
+            <li><a href="#" onclick="return insertParam('type','force')">URIチャート</a></li>
             <li><a href="#" onclick="return insertParam('type','list')">一覧表示</a></li>
           </ul>
         </li>
       </ul>
       <ul class="nav navbar-nav">
         <li class="dropdown">
-          <a href="#"　class="dropdown-toggle" id="buttonInterval" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">更新頻度(<span id="updateInterval">{{updateInterval}}</span>秒)<span class="caret"></span></a>
+          <a href="#"　class="dropdown-toggle" id="buttonInterval" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">更新(<span id="updateInterval">{{updateInterval}}</span>秒)<span class="caret"></span></a>
           <ul class="dropdown-menu">
             <li><a href="#" onclick="return updateInterval(3000)">3秒</a></li>
             <li><a href="#" onclick="return updateInterval(5000)">5秒</a></li>
@@ -114,3 +115,11 @@ var timeoutId = setTimeout('update({{ updateInterval * 1000}})', {{ updateInterv
       </div>
   </div><!-- /.container-fluid -->
 </nav>
+{% block stylesheet %}
+<style>
+.navbar-btn {
+	margin-top:5px;
+	margin-bottom:3px;
+}
+</style>
+{% endblock stylesheet %}

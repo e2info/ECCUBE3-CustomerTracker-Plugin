@@ -26,6 +26,10 @@ Plugin\CustomerTracker\Entity\History:
             type: string
             length: 255
             nullable: false
+        prev_uri:
+            type: string
+            length: 255
+            nullable: true
         referrer:
             type: string
             length: 255
